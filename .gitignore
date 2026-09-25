@@ -1,0 +1,29 @@
+# Environment & Secrets
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Database & Cache
+*.sqlite3
+*.db
+dump.rdb
+
+# Testing & Cache
+.pytest_cache/
+.coverage
+
+# IDE
+.vscode/
+.idea/
