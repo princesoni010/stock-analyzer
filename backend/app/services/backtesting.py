@@ -453,9 +453,8 @@ class BacktestingService:
                     f"{idx:<4} {symbol:<15} {outcome:<14} {pnl_str:>12}"
                 )
             lines.append("-" * 47)
-            lines.append(
-                f"{'':>34} {'₹' + f\"{metrics['total_pnl']:,.2f}\":>12}"
-            )
+            tot_pnl_str: str = f"₹{metrics['total_pnl']:,.2f}"
+            lines.append(f"{'':>34} {tot_pnl_str:>12}")
 
         report: str = "\n".join(lines)
         logger.debug("Performance report generated:\n%s", report)

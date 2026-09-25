@@ -19,8 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database.models import AIReport, ScreeningResult
 from app.database.session import get_db
-from app.schemas.reports import AIReportRead, AIReportRequest, AIReportResponse
-from app.services.nvidia_ai import NvidiaAIService
+from app.schemas.reports import AIReportRead
+from app.services.nvidia_ai import NvidiaAIService, AIReportRequest, AIReportResponse
 
 logger = logging.getLogger(__name__)
 

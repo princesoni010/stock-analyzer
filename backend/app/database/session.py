@@ -61,7 +61,7 @@ def _build_engine() -> AsyncEngine:
 
     engine = create_async_engine(
         db_url,
-        echo=settings.DEBUG,           # log SQL in DEBUG mode
+        echo=(settings.APP_ENV == "development"),  # log SQL in development mode
         pool_pre_ping=True,            # verify connections before use
         pool_size=10,
         max_overflow=20,

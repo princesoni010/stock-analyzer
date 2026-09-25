@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import PaperTrade
 from app.database.session import get_db
-from app.schemas.trades import PaperTradeCreate, PaperTradeRead, PaperTradeUpdate
+from app.schemas.trades import PaperTradeCreate, PaperTradeRead
 from app.services.backtesting import BacktestingService
 
 logger = logging.getLogger(__name__)
