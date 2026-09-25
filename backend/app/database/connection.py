@@ -38,23 +38,26 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Engine
+# Database URL Normalisation
+# Render / Heroku pass 'postgres://' or 'postgresql://' which fails with asyncpg.
 # ---------------------------------------------------------------------------
-# pool_pre_ping ensures stale connections are detected and refreshed before use.
-# echo is enabled in non-production environments for SQL tracing.
+raw_db_url = settings.DATABASE_URL or ""
+if raw_db_url.startswith("postgres://"):
+    raw_db_url = raw_db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+elif raw_db_url.startswith("postgresql://") and not raw_db_url.startswith("postgresql+asyncpg://"):
+    raw_db_url = raw_db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+# Fallback for empty DATABASE_URL in dev/test
+if not raw_db_url:
+    raw_db_url = "sqlite+aiosqlite:///:memory:"
+
 engine: AsyncEngine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=not settings.is_production,
+    raw_db_url,
+    echo=(settings.APP_ENV != "production"),
     pool_size=5,
     max_overflow=10,
     pool_pre_ping=True,
-    pool_recycle=3600,           # recycle connections every hour
-    connect_args={
-        "server_settings": {
-            "application_name": "bharat-market-ai",
-            "timezone": "UTC",
-        }
-    },
+    pool_recycle=3600,
 )
 
 # ---------------------------------------------------------------------------
@@ -110,19 +113,16 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 # Startup helper
 # ---------------------------------------------------------------------------
 async def init_db() -> None:
-    """Create all tables that do not yet exist in the database.
-
-    This is intentionally NOT a migration tool – it is a safe no-op if the
-    schema is already up to date.  Use Alembic for schema migrations.
-    """
-    # Import here to avoid circular imports; models must be registered before
-    # `metadata.create_all` is called.
-    from app.database.models import Base  # noqa: F401  (side-effect import)
+    """Create all tables that do not yet exist in the database."""
+    from app.database.models import Base  # noqa: F401
 
     logger.info("Initialising database schema …")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    logger.info("Database schema ready.")
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database schema ready.")
+    except Exception as exc:
+        logger.warning("Could not initialise database on startup: %s. App will continue.", exc)
 
 
 # ---------------------------------------------------------------------------
