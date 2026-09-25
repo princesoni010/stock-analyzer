@@ -4,6 +4,7 @@ pydantic
 pydantic-settings
 asyncpg
 sqlalchemy
+greenlet
 alembic
 celery
 redis
