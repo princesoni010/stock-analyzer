@@ -9,7 +9,7 @@ celery
 redis
 pandas
 numpy
-pandas-ta
+git+https://github.com/twopirllc/pandas-ta.git
 httpx
 python-telegram-bot
 openai
