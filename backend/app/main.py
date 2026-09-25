@@ -147,12 +147,8 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # ty
 # whitelisted origins are permitted.
 # ---------------------------------------------------------------------------
 
-if settings.APP_ENV == "development":
-    _cors_origins: list[str] = ["*"]
-    _allow_credentials: bool = False  # credentials + wildcard is disallowed by spec
-else:
-    _cors_origins = settings.ALLOWED_ORIGINS  # e.g. ["https://yourdomain.com"]
-    _allow_credentials = True
+_cors_origins: list[str] = ["*"]
+_allow_credentials: bool = False
 
 app.add_middleware(
     CORSMiddleware,

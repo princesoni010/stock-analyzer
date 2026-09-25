@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     APP_ENV: str = Field(default="development", description="development | staging | production")
     LOG_LEVEL: str = Field(default="INFO", description="Python logging level")
     CALCULATION_VERSION: str = Field(default="1.0", description="Version tag stamped on computed rows")
+    ALLOWED_ORIGINS: List[str] = Field(default_factory=lambda: ["*"], description="CORS allowed origins")
 
     # ------------------------------------------------------------------
     # Database
