@@ -3,7 +3,7 @@ uvicorn
 pydantic
 pydantic-settings
 asyncpg
-sqlalchemy
+sqlalchemy[asyncio]
 greenlet
 alembic
 celery
