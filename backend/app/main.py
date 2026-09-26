@@ -110,6 +110,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # type: ignore[
         # We can map some mock/real async functions here later if needed
         # For now, commands like /start, /help, /settings will work automatically.
         
+        
         # --- Webhook Services Mappings ---
         from sqlalchemy import select
         from app.database.session import AsyncSessionLocal
@@ -121,7 +122,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # type: ignore[
                 report = (await session.execute(stmt)).scalar_one_or_none()
                 if not report:
                     return {"market_summary": {}, "themes": [], "candidates": []}
-                # Because we stored markdown text, we can just return it as a fake "market" section and empty others so the format handles it
                 return {"market_summary": {"regime_name": "AI Report Ready", "regime_score": 100, "nifty_pct_change": 0, "breadth": "Check Telegram Message above", "risk_level": "Medium"}, "themes": [], "candidates": []}
 
         async def get_market_data():
@@ -140,7 +140,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # type: ignore[
                 return [{"symbol": r.symbol, "total_score": float(r.total_score), "signal": r.signal, "entry_low": float(r.entry_low or 0), "entry_high": float(r.entry_high or 0), "stop_loss": float(r.stop_loss or 0), "target_1": float(r.target_1 or 0), "target_2": float(r.target_2 or 0), "quantity": 10, "risk_amount": 1000} for r in res]
 
         async def get_stock_data(symbol: str):
-            return {"symbol": symbol, "price": 0, "technical_score": 50, "fundamental_score": 50, "news_score": 50, "total_score": 50, "signal": "neutral"}
+            async with AsyncSessionLocal() as session:
+                stmt = select(ScreeningResult).where(ScreeningResult.symbol == symbol).order_by(ScreeningResult.created_at.desc()).limit(1)
+                r = (await session.execute(stmt)).scalar_one_or_none()
+                if not r:
+                    return None
+                return {"symbol": r.symbol, "total_score": float(r.total_score), "signal": r.signal, "entry_price": float(r.entry_high or 0), "stop_loss": float(r.stop_loss or 0), "target_1": float(r.target_1 or 0), "target_2": float(r.target_2 or 0)}
 
         async def get_paper_trades():
             async with AsyncSessionLocal() as session:
@@ -161,6 +166,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # type: ignore[
             "backtest": get_backtest,
         }
         tg_service.register_handlers(services=services_dict)
+
 
         
         await tg_service.application.initialize()
