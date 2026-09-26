@@ -134,7 +134,7 @@ async def init_db() -> None:
     # Import models here to ensure they are registered on Base.metadata before
     # create_all is invoked.  Add new model modules here as they are created.
     try:
-        import app.models  # noqa: F401 – registers all ORM models
+        import app.database.models  # noqa: F401 – registers all ORM models
     except ImportError:
         logger.warning(
             "app.models could not be imported; tables may not be created. "
@@ -144,7 +144,7 @@ async def init_db() -> None:
     logger.info("Running init_db(): creating all tables if they do not exist…")
     try:
         async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(app.database.models.Base.metadata.create_all)
         logger.info("init_db() completed successfully.")
     except Exception as exc:
         logger.error("init_db() failed: %s", exc, exc_info=True)
