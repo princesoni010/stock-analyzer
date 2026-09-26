@@ -88,7 +88,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # type: ignore[
     --------
     Log a graceful shutdown message.
     """
-    # ── Startup ──────────────────────────────────────────────────────────────
+        # ── Startup ──────────────────────────────────────────────────────────────
     logger.info("=== Bharat Market AI is starting up ===")
 
     try:
@@ -97,6 +97,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # type: ignore[
     except Exception as exc:  # pragma: no cover
         logger.critical("Failed to initialise database: %s", exc, exc_info=True)
         raise
+
+    # Initialize Telegram Bot for Webhook
+    from app.services.telegram import TelegramService
+    if settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_CHAT_ID:
+        allowed = [c.strip() for c in settings.TELEGRAM_CHAT_ID.split(",") if c.strip()]
+        tg_service = TelegramService(
+            token=settings.TELEGRAM_BOT_TOKEN,
+            allowed_chat_ids=allowed,
+        )
+        
+        # We can map some mock/real async functions here later if needed
+        # For now, commands like /start, /help, /settings will work automatically.
+        tg_service.register_handlers(services={})
+        
+        await tg_service.application.initialize()
+        await tg_service.application.start()
+        app.state.tg_service = tg_service
+        logger.info("Telegram Bot Webhook Mode initialized.")
 
     # Log every registered route for easy diagnostics.
     logger.info("Registered routes:")
@@ -115,7 +133,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # type: ignore[
 
     yield  # ← application is live
 
-    # ── Shutdown ─────────────────────────────────────────────────────────────
+        # ── Shutdown ─────────────────────────────────────────────────────────────
+    logger.info("Shutting down Telegram Bot...")
+    if getattr(app.state, "tg_service", None):
+        try:
+            await app.state.tg_service.application.stop()
+            await app.state.tg_service.application.shutdown()
+        except Exception as e:
+            logger.error("Error shutting down bot: %s", e)
+            
     logger.info("=== Bharat Market AI is shutting down — goodbye ===")
 
 

@@ -85,3 +85,26 @@ async def send_test_telegram(payload: TelegramTestRequest) -> Dict[str, Any]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Telegram send failure: {str(exc)}",
         )
+
+from fastapi import Request
+from telegram import Update
+
+@router.post(
+    "/webhook",
+    summary="Telegram Webhook",
+    description="Receives incoming updates from Telegram and processes them.",
+)
+async def telegram_webhook(request: Request) -> Dict[str, Any]:
+    try:
+        tg_service = getattr(request.app.state, "tg_service", None)
+        if not tg_service:
+            logger.error("tg_service not initialized on app.state")
+            return {"status": "error"}
+        
+        data = await request.json()
+        update = Update.de_json(data, tg_service.bot)
+        await tg_service.application.process_update(update)
+        return {"status": "ok"}
+    except Exception as exc:
+        logger.error("Error processing webhook: %s", exc, exc_info=True)
+        return {"status": "error"}

@@ -926,22 +926,12 @@ class TelegramService:
     # Polling
     # ------------------------------------------------------------------
 
-    async def run_polling(self, services: dict[str, Any]) -> None:
+    def register_handlers(self, services: dict[str, Any]) -> None:
         """
-        Register all command handlers and start the Telegram bot in polling mode.
-
-        Each handler validates the sender's chat ID against the allowed list
-        before delegating to ``handle_command``.
-
-        Parameters
-        ----------
-        services : dict
-            Service callables passed through to ``handle_command``.
+        Register all command handlers.
         """
-        # ----------------------------------------------------------------
-        # Inner factory so each handler closure captures the right command
-        # ----------------------------------------------------------------
         def _make_handler(cmd_name: str):
+
             """Create an async Telegram CommandHandler callback for *cmd_name*."""
 
             async def _handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1026,8 +1016,4 @@ class TelegramService:
             )
             logger.debug("Registered handler for /%s", cmd)
 
-        logger.info("Starting Telegram bot polling…")
-        await self.application.run_polling(
-            allowed_updates=Update.ALL_TYPES,
-            close_loop=False,
-        )
+        logger.info("Telegram command handlers registered.")
