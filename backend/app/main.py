@@ -117,12 +117,66 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # type: ignore[
         from app.database.models import AIReport, ScreeningResult, PaperTrade, ThemeStockMapping
         
         async def get_morning_report():
-            async with AsyncSessionLocal() as session:
-                stmt = select(AIReport).where(AIReport.report_type == 'morning').order_by(AIReport.created_at.desc()).limit(1)
-                report = (await session.execute(stmt)).scalar_one_or_none()
-                if not report:
-                    return {"market_summary": {}, "themes": [], "candidates": []}
-                return {"market_summary": {"regime_name": "AI Report Ready", "regime_score": 100, "nifty_pct_change": 0, "breadth": "Check Telegram Message above", "risk_level": "Medium"}, "themes": [], "candidates": []}
+            import httpx
+            import xml.etree.ElementTree as ET_xml
+            import asyncio
+            from datetime import datetime, timezone
+            
+            # 1. Fetch Nifty 50 live data via yfinance
+            market_summary = {"regime_name": "Neutral", "regime_score": 50.0, "nifty_pct_change": 0.0, "breadth": "N/A", "risk_level": "Medium"}
+            try:
+                import yfinance as yf
+                nifty = await asyncio.get_event_loop().run_in_executor(None, lambda: yf.Ticker("^NSEI").history(period="2d"))
+                if len(nifty) >= 2:
+                    prev_close = float(nifty["Close"].iloc[-2])
+                    last_close = float(nifty["Close"].iloc[-1])
+                    pct_chg = round(((last_close - prev_close) / prev_close) * 100, 2)
+                    score = 65 if pct_chg > 0 else 35
+                    regime = "Bullish" if pct_chg > 0.5 else "Mildly Bullish" if pct_chg > 0 else "Bearish" if pct_chg < -0.5 else "Mildly Bearish"
+                    risk = "Low" if pct_chg > 0.5 else "Medium" if pct_chg > -0.5 else "High"
+                    market_summary = {"regime_name": regime, "regime_score": score, "nifty_pct_change": pct_chg, "breadth": f"Nifty: {last_close:.0f}", "risk_level": risk}
+            except Exception:
+                pass
+
+            # 2. Fetch themes (static seasonal)
+            from datetime import date
+            month = date.today().month
+            themes = []
+            if month in [9, 10, 11]:
+                themes.append({"name": "Festive Demand", "score": 80.0, "top_stocks": ["MARUTI", "TITAN", "ASIANPAINT"]})
+            if month in [6, 7, 8, 9]:
+                themes.append({"name": "Monsoon / Kharif", "score": 70.0, "top_stocks": ["UPL", "COROMANDEL", "PI"]})
+            if month in [1, 4, 7, 10]:
+                themes.append({"name": "Earnings Season", "score": 75.0, "top_stocks": ["TCS", "INFY", "RELIANCE"]})
+            themes.append({"name": "Infrastructure", "score": 72.0, "top_stocks": ["LT", "ULTRACEMCO"]})
+
+            # 3. Fetch top stock headlines as candidates
+            candidates = []
+            try:
+                async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as client:
+                    resp = await client.get("https://economictimes.indiatimes.com/markets/stocks/rssfeeds/2146842.cms")
+                    if resp.status_code == 200:
+                        root = ET_xml.fromstring(resp.text)
+                        for i, item in enumerate(root.iter("item")):
+                            if i >= 3:
+                                break
+                            title_el = item.find("title")
+                            if title_el is not None and title_el.text:
+                                candidates.append({
+                                    "symbol": f"NEWS_{i+1}",
+                                    "company_name": title_el.text.strip()[:60],
+                                    "total_score": 70 - (i * 5),
+                                    "entry_price": 0,
+                                    "stop_loss": 0,
+                                    "target_1": 0,
+                                    "target_2": 0,
+                                    "technical_rationale": title_el.text.strip(),
+                                    "risk_reward": 0,
+                                })
+            except Exception:
+                pass
+
+            return {"market_summary": market_summary, "themes": themes, "candidates": candidates}
 
         async def get_market_news():
             import httpx
