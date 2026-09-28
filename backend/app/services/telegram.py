@@ -914,7 +914,7 @@ class TelegramService:
                     "",
                     "/start — Welcome message and feature overview",
                     "/morning — Latest morning market report",
-                    "/news — Aaj ka market summary\n                    "/market — Current market regime and NIFTY summary",
+                    "/news — Aaj ka market summary\n                    /market — Current market regime and NIFTY summary",
                     "/themes — Active investment themes with top stocks",
                     "/watchlist — Top 10 screener results",
                     "/stock SYMBOL — Detailed analysis for a specific stock",
