@@ -407,6 +407,7 @@ from app.api import (  # noqa: E402 — imports after app creation is intentiona
     reports,
     trades,
     telegram_api,
+    cron,
 )
 
 app.include_router(health.router)
