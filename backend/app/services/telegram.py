@@ -715,23 +715,52 @@ class TelegramService:
                 if report_fn is None:
                     return "⚠️ Morning report service is not available\\."
                 report: dict = await report_fn()
-                market_sec = self._format_market_section(
-                    report.get("market_summary", {})
-                )
-                theme_sec = self._format_theme_section(report.get("themes", []))
+                
+                # Build response safely
+                parts = []
+                parts.append("🌅 *Latest Morning Report*\n")
+                
+                # Market section
+                try:
+                    market_sec = self._format_market_section(
+                        report.get("market_summary", {})
+                    )
+                    parts.append(market_sec)
+                except Exception:
+                    parts.append("🟡 *Market Regime*\n_Data loading\\.\\.\\._")
+                
+                parts.append("")
+                
+                # Theme section
+                try:
+                    theme_sec = self._format_theme_section(report.get("themes", []))
+                    parts.append(theme_sec)
+                except Exception:
+                    parts.append("🔖 *Active Themes*\n_Loading\\.\\.\\._")
+                
+                parts.append("\n📊 *Top Picks*")
+                
+                # Candidates - use simple safe formatting
                 candidates = report.get("candidates", [])[:3]
-                stock_lines: list[str] = []
-                for rank, c in enumerate(candidates, start=1):
-                    stock_lines.append(f"\n*#{rank}*\n{self._format_stock_section(c)}")
-                stocks_sec = "".join(stock_lines) if stock_lines else "_No candidates\\._"
-                return (
-                    "🌅 *Latest Morning Report*\n\n"
-                    + market_sec
-                    + "\n\n"
-                    + theme_sec
-                    + "\n\n📊 *Top Picks*\n"
-                    + stocks_sec
-                )
+                if not candidates:
+                    parts.append("_No candidates\\._")
+                else:
+                    for rank, c in enumerate(candidates, start=1):
+                        try:
+                            sym = self._escape_markdown(str(c.get("symbol", "N/A")))
+                            score_val = c.get("total_score", 0)
+                            try:
+                                score_str = self._escape_markdown(f"{float(score_val):.1f}")
+                            except (TypeError, ValueError):
+                                score_str = "0"
+                            name = self._escape_markdown(str(c.get("company_name", ""))[:50])
+                            parts.append(f"\n*\\#{rank}* {sym} \\- Score: {score_str}")
+                            if name:
+                                parts.append(f"  {name}")
+                        except Exception:
+                            parts.append(f"\n*\\#{rank}* Info unavailable")
+                
+                return "\n".join(parts)
             except Exception as exc:
                 logger.error("Error fetching morning report: %s", exc, exc_info=True)
                 return f"❌ Failed to fetch morning report: {self._escape_markdown(str(exc))}"
