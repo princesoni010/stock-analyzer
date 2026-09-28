@@ -13,9 +13,9 @@ class DummyTask:
         pass
 def run_daily_workflow():
     try:
-        from app.workers.tasks import market_data_update, daily_screener, morning_report
+        from app.workers.tasks import overnight_news_fetch, market_data_update, daily_screener, morning_report
         
-        logger.info("Starting Daily Workflow (Cron) - Market Data")
+        logger.info("Starting Daily Workflow (Cron) - News Fetch")\n        overnight_news_fetch(DummyTask())\n        logger.info("Starting Daily Workflow (Cron) - Market Data")
         market_data_update(DummyTask())
         
         logger.info("Starting Daily Workflow (Cron) - Screener")

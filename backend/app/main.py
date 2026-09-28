@@ -124,6 +124,28 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # type: ignore[
                     return {"market_summary": {}, "themes": [], "candidates": []}
                 return {"market_summary": {"regime_name": "AI Report Ready", "regime_score": 100, "nifty_pct_change": 0, "breadth": "Check Telegram Message above", "risk_level": "Medium"}, "themes": [], "candidates": []}
 
+        async def get_market_news():
+            from app.database.models import NewsArticle
+            from app.services.nvidia_ai import NvidiaAIService
+            from app.config import settings
+            
+            async with AsyncSessionLocal() as session:
+                from sqlalchemy import select
+                stmt = select(NewsArticle).order_by(NewsArticle.published_at.desc()).limit(15)
+                articles = (await session.execute(stmt)).scalars().all()
+                
+                if not articles:
+                    return "Aaj ki taaza khabar database mein nahi hai. Pehle data scrape hone dijiye!"
+                
+                article_dicts = [{"id": str(a.id), "title": a.title, "content": a.summary or a.raw_text or a.title} for a in articles]
+                
+                ai = NvidiaAIService(api_key=settings.NVIDIA_API_KEY, base_url=str(settings.NVIDIA_BASE_URL), model=settings.NVIDIA_MODEL)
+                try:
+                    res = await ai.generate_news_summary(article_dicts)
+                    return res.get("summary", "News AI summarize nahi kar paya.")
+                except Exception as e:
+                    return f"News summarize karne mein error aayi: {e}"
+
         async def get_market_data():
             return {"regime_name": "Neutral to Bullish", "regime_score": 65.5, "nifty_pct_change": 0.45, "breadth": "1.2", "risk_level": "Medium"}
 
@@ -158,6 +180,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # type: ignore[
 
         services_dict = {
             "morning_report": get_morning_report,
+            "market_news": get_market_news,
             "market_data": get_market_data,
             "theme_engine": get_themes,
             "screener": get_screener,

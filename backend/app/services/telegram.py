@@ -736,6 +736,17 @@ class TelegramService:
                 logger.error("Error fetching morning report: %s", exc, exc_info=True)
                 return f"❌ Failed to fetch morning report: {self._escape_markdown(str(exc))}"
 
+        elif cmd == "news":
+            try:
+                news_fn = services.get("market_news")
+                if news_fn is None:
+                    return "⚠️ News service is not available\\."
+                news_text = await news_fn()
+                return "📰 *Aaj Ki Taaza Khabar*\n\n" + self._escape_markdown(str(news_text))
+            except Exception as exc:
+                logger.error("Error fetching news: %s", exc, exc_info=True)
+                return f"❌ Failed to fetch news: {self._escape_markdown(str(exc))}"
+
         elif cmd == "market":
             try:
                 market_fn = services.get("market_data")
@@ -903,7 +914,7 @@ class TelegramService:
                     "",
                     "/start — Welcome message and feature overview",
                     "/morning — Latest morning market report",
-                    "/market — Current market regime and NIFTY summary",
+                    "/news — Aaj ka market summary\n                    "/market — Current market regime and NIFTY summary",
                     "/themes — Active investment themes with top stocks",
                     "/watchlist — Top 10 screener results",
                     "/stock SYMBOL — Detailed analysis for a specific stock",
@@ -1000,6 +1011,7 @@ class TelegramService:
         _commands = [
             "start",
             "morning",
+            "news",
             "market",
             "themes",
             "watchlist",
