@@ -394,6 +394,7 @@ app.include_router(screener.router)
 app.include_router(reports.router)
 app.include_router(trades.router)
 app.include_router(telegram_api.router)
+app.include_router(cron.router)
 
 # ---------------------------------------------------------------------------
 # Root route
